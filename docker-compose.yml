@@ -1,0 +1,98 @@
+version: "3.8"
+
+
+
+services:
+    db:
+        image: rwgrim/docker-noop
+        depends_on:
+            - auth_db
+            - mongo-data
+
+    db-gui:
+        image: rwgrim/docker-noop
+        depends_on:
+            - phpmyadmin
+            - mongo-express-data
+
+    myApp:
+        image: rwgrim/docker-noop
+        depends_on:
+            - vue
+
+
+
+
+    # --------------------------------------- DATABASES ---------------------------------------
+
+    mongo-data:
+        container_name: DB-DATA
+        image: mongo:3.6
+        restart: always
+        ports:
+            - "27017:27017"
+        command: mongod --nojournal --port 27017 --smallfiles --oplogSize 128
+        environment:
+            MONGO_INITDB_ROOT_USERNAME: root
+            MONGO_INITDB_ROOT_PASSWORD: mongoadmin
+            MONGO_INITDB_DATABASE: myCinema_DB
+            MONGODB_USER: cinema
+            MONGODB_DATABASE: myCinema_DB
+            MONGODB_PASS: cinema
+        volumes:
+            - ./dbDatas/mongo-data:/data/db
+
+    auth_db:
+        container_name: DB-AUTH
+        image: mysql/mysql-server:5.7.21
+        expose:
+            - 3306
+        ports:
+            - '3306:3306'
+        environment:
+            - MYSQL_ROOT_PASSWORD=idm
+            - MYSQL_ROOT_HOST=%
+        volumes:
+            - ./dbDatas/auth_db:/var/lib/mysql
+
+    # ------------------------------------ DATABASES UIs --------------------------------
+
+    phpmyadmin:
+        image: phpmyadmin/phpmyadmin:4.8
+        container_name: PHPMYADMIN
+        ports:
+            - "8082:80"
+        environment:
+            - PMA_HOST=auth_db
+        depends_on:
+            - auth_db
+        links:
+            - auth_db:mysql
+        restart: always
+
+    mongo-express-data:
+        image: mongo-express
+        container_name: MN-DATA-EXPRESS
+        restart: always
+        ports:
+            - 8081:8081
+        environment:
+            ME_CONFIG_MONGODB_ADMINUSERNAME: root
+            ME_CONFIG_MONGODB_ADMINPASSWORD: mongoadmin
+            ME_CONFIG_MONGODB_SERVER: mongo-data
+            ME_CONFIG_MONGODB_PORT: 27017
+
+
+    # ------------------------------------ MY APPLICATION ------------------------------------
+
+    vue:
+        restart: always
+        container_name: VUE
+        build:
+            context: .
+            dockerfile: DockerFiles/vue/vueDF
+        expose:
+            - "80"
+        ports:
+            - "80:80"
+            
